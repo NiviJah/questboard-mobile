@@ -217,14 +217,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Boot: load SQLite cache then try server
   useEffect(() => {
-    const cachedState = loadState();
-    const cachedConfig = loadConfig();
-    const cfg = cachedConfig ?? defaultConfig;
-    applyConfig(cfg);
-    if (cachedState) {
-      applyState(cachedState);
-    }
-    refreshFromServer();
+    (async () => {
+      const cachedConfig = await loadConfig();
+      const cachedState = await loadState();
+      const cfg = cachedConfig ?? defaultConfig;
+      applyConfig(cfg);
+      if (cachedState) {
+        applyState(cachedState);
+      }
+      refreshFromServer();
+    })();
 
     // WS listener
     const unsub = wsClient.addListener((msg) => {

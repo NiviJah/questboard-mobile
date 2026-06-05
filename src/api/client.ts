@@ -45,7 +45,10 @@ export async function postConfig(data: any): Promise<void> {
 export async function testConnection(serverUrl: string): Promise<boolean> {
   try {
     const base = `http://${serverUrl.replace(/^https?:\/\//, '')}`;
-    const res = await fetch(`${base}/api/config`, { signal: AbortSignal.timeout(4000) });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${base}/api/config`, { signal: controller.signal });
+    clearTimeout(timer);
     return res.ok;
   } catch {
     return false;
