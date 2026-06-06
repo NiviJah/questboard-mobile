@@ -8,3 +8,4 @@ ios/Pods/
 *.apk
 *.aab
 android/app/.cxx/
+questboard-release.keystore
