@@ -58,12 +58,12 @@ export default function SettingsScreen() {
   function saveEdit() {
     if (!editTarget) return;
     if (editTarget.type === 'chore') {
-      const updated = (config.chores ?? []).map((c: any) =>
+      const updated = (config.customChores ?? []).map((c: any) =>
         c.id === editTarget.item.id
           ? { ...c, name: editName, icon: editIcon, pts: parseInt(editPts) || c.pts, freq: editFreq, who: editWho }
           : c,
       );
-      updateConfig({ chores: updated });
+      updateConfig({ customChores: updated });
     } else {
       const updated = (config.rewards ?? []).map((r: any) =>
         r.id === editTarget.item.id
@@ -81,7 +81,10 @@ export default function SettingsScreen() {
       {
         text: 'Delete', style: 'destructive', onPress: () => {
           if (type === 'chore') {
-            updateConfig({ chores: (config.chores ?? []).filter((c: any) => c.id !== id) });
+            updateConfig({
+              customChores: (config.customChores ?? []).filter((c: any) => c.id !== id),
+              enabledChores: (config.enabledChores ?? []).filter((eid: string) => eid !== id),
+            });
           } else {
             updateConfig({ rewards: (config.rewards ?? []).filter((r: any) => r.id !== id) });
           }
@@ -100,7 +103,10 @@ export default function SettingsScreen() {
       who: 'all',
       mode: 'party',
     };
-    updateConfig({ chores: [...(config.chores ?? []), newChore] });
+    updateConfig({
+      customChores: [...(config.customChores ?? []), newChore],
+      enabledChores: [...(config.enabledChores ?? []), newChore.id],
+    });
     openEdit('chore', newChore);
   }
 
@@ -172,7 +178,7 @@ export default function SettingsScreen() {
     ]);
   }
 
-  const chores: any[] = config.chores ?? [];
+  const chores: any[] = config.customChores ?? [];
   const rewards: any[] = config.rewards ?? [];
 
   return (
