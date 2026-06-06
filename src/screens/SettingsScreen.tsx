@@ -26,7 +26,7 @@ export default function SettingsScreen() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<boolean | null>(null);
   const [householdCode, setHouseholdCode] = useState<string | null>(null);
-  const isAdmin = getIsAdmin();
+  const isAdmin = true; // home app — everyone can manage quests/rewards
 
   // Admin edit modal state
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
