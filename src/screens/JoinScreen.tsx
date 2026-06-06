@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { joinHousehold, setServerUrl, testConnection } from '../api/client';
+import { getIsAdmin, joinHousehold, setIsAdmin, setServerUrl, testConnection } from '../api/client';
 import { colors, spacing } from '../theme';
 
 interface Props {
@@ -37,6 +37,7 @@ export default function JoinScreen({ onJoined }: Props) {
         const result = await testConnection(url);
         if (result.ok) {
           setServerUrl(url);
+          setIsAdmin(true);
           onJoined();
         } else {
           Alert.alert('Cannot reach server ❌', result.error || 'Check the address and try again.');

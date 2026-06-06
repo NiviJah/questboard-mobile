@@ -13,6 +13,14 @@ export function setServerUrl(url: string): void {
   storage.set('serverUrl', url);
 }
 
+export function getIsAdmin(): boolean {
+  return storage.getBoolean('isAdmin') ?? false;
+}
+
+export function setIsAdmin(val: boolean): void {
+  storage.set('isAdmin', val);
+}
+
 function apiBase(): string {
   const url = getServerUrl();
   if (!url) return '';
