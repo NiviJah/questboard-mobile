@@ -24,15 +24,22 @@ export default function SettingsScreen() {
 
   async function handleTestAndSave() {
     setTesting(true);
-    const ok = await testConnection(serverInput);
-    setTestResult(ok);
-    setTesting(false);
-    if (ok) {
-      setServerUrl(serverInput.trim());
-      await refreshFromServer();
-      Alert.alert('Connected!', 'Server URL saved and data synced.');
-    } else {
-      Alert.alert('Connection failed', 'Could not reach the server. Check the URL.');
+    setTestResult(null);
+    try {
+      const result = await testConnection(serverInput);
+      setTestResult(result.ok);
+      if (result.ok) {
+        setServerUrl(serverInput.trim());
+        try { await refreshFromServer(); } catch {}
+        Alert.alert('Connected! ✅', 'Server URL saved.');
+      } else {
+        Alert.alert('Connection failed ❌', result.error);
+      }
+    } catch (e) {
+      setTestResult(false);
+      Alert.alert('Error', String(e));
+    } finally {
+      setTesting(false);
     }
   }
 

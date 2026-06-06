@@ -1,6 +1,9 @@
+import { NativeModules } from 'react-native';
 import { MMKV } from 'react-native-mmkv';
 
 const storage = new MMKV({ id: 'questboard-settings' });
+
+const { QBNet } = NativeModules;
 
 export function getServerUrl(): string {
   return storage.getString('serverUrl') ?? '';
@@ -12,50 +15,142 @@ export function setServerUrl(url: string): void {
 
 function apiBase(): string {
   const url = getServerUrl();
-  return url ? `http://${url.replace(/^https?:\/\//, '')}` : '';
+  if (!url) return '';
+  if (url.startsWith('https://') || url.startsWith('http://')) return url.replace(/\/$/, '');
+  return `http://${url}`;
 }
 
-async function apiFetch(path: string, options?: RequestInit): Promise<any> {
-  const base = apiBase();
-  if (!base) throw new Error('No server URL configured');
-  const res = await fetch(`${base}/api${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
+let _reqCounter = 0;
+function nextId(): string {
+  return `${Date.now()}_${++_reqCounter}`;
+}
+
+function qbGet(url: string, timeoutMs = 12000): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const id = nextId();
+    const deadline = Date.now() + timeoutMs;
+
+    QBNet.get(url, id);
+
+    const poll = () => {
+      const raw: string | null = QBNet.poll(id);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.ok) {
+            const body = parsed.body;
+            resolve(typeof body === 'string' ? JSON.parse(body) : body ?? {});
+          } else {
+            reject(new Error(parsed.error ?? `HTTP ${parsed.status}`));
+          }
+        } catch {
+          reject(new Error('Invalid response'));
+        }
+        return;
+      }
+      if (Date.now() > deadline) {
+        reject(new Error('Request timed out'));
+        return;
+      }
+      setTimeout(poll, 100);
+    };
+
+    setTimeout(poll, 100);
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+}
+
+function qbPost(url: string, body: any, timeoutMs = 12000): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const id = nextId();
+    const deadline = Date.now() + timeoutMs;
+
+    QBNet.post(url, JSON.stringify(body), id);
+
+    const poll = () => {
+      const raw: string | null = QBNet.poll(id);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.ok) {
+            const b = parsed.body;
+            resolve(typeof b === 'string' ? JSON.parse(b) : b ?? {});
+          } else {
+            reject(new Error(parsed.error ?? `HTTP ${parsed.status}`));
+          }
+        } catch {
+          reject(new Error('Invalid response'));
+        }
+        return;
+      }
+      if (Date.now() > deadline) {
+        reject(new Error('Request timed out'));
+        return;
+      }
+      setTimeout(poll, 100);
+    };
+
+    setTimeout(poll, 100);
+  });
 }
 
 export async function fetchState(): Promise<any> {
-  return apiFetch('/state');
+  const base = apiBase();
+  if (!base) throw new Error('No server URL configured');
+  return qbGet(`${base}/api/state`);
 }
 
 export async function postState(data: any): Promise<void> {
-  await apiFetch('/state', { method: 'POST', body: JSON.stringify(data) });
+  const base = apiBase();
+  if (!base) throw new Error('No server URL configured');
+  await qbPost(`${base}/api/state`, data);
 }
 
 export async function fetchConfig(): Promise<any> {
-  return apiFetch('/config');
+  const base = apiBase();
+  if (!base) throw new Error('No server URL configured');
+  return qbGet(`${base}/api/config`);
 }
 
 export async function postConfig(data: any): Promise<void> {
-  await apiFetch('/config', { method: 'POST', body: JSON.stringify(data) });
+  const base = apiBase();
+  if (!base) throw new Error('No server URL configured');
+  await qbPost(`${base}/api/config`, data);
 }
 
-export async function testConnection(serverUrl: string): Promise<boolean> {
-  try {
-    const base = `http://${serverUrl.replace(/^https?:\/\//, '')}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(`${base}/api/config`, { signal: controller.signal });
-    clearTimeout(timer);
-    return res.ok;
-  } catch {
-    return false;
-  }
+export async function testConnection(serverUrl: string): Promise<{ ok: boolean; error: string }> {
+  const base = serverUrl.startsWith('http') ? serverUrl.replace(/\/$/, '') : `http://${serverUrl}`;
+  const id = nextId();
+  const timeoutMs = 10000;
+  const deadline = Date.now() + timeoutMs;
+
+  console.log('[QB] testConnection via QBNet GET', `${base}/api/config`);
+  QBNet.get(`${base}/api/config`, id);
+
+  return new Promise((resolve) => {
+    const poll = () => {
+      const raw: string | null = QBNet.poll(id);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          console.log('[QB] testConnection result', parsed.ok, parsed.status);
+          resolve(parsed.ok ? { ok: true, error: '' } : { ok: false, error: parsed.error ?? `HTTP ${parsed.status}` });
+        } catch {
+          resolve({ ok: false, error: 'Invalid response' });
+        }
+        return;
+      }
+      if (Date.now() > deadline) {
+        console.log('[QB] testConnection TIMEOUT');
+        resolve({ ok: false, error: 'Timed out' });
+        return;
+      }
+      setTimeout(poll, 100);
+    };
+    setTimeout(poll, 100);
+  });
 }
 
-// ── WebSocket ─────────────────────────────────────────────────────────────────
+// ── WebSocket (best-effort real-time updates) ─────────────────────────────────
 
 type WsListener = (msg: { type: string; data: any }) => void;
 
@@ -88,7 +183,8 @@ class QuestboardWs {
   private openSocket(): void {
     const url = getServerUrl();
     if (!url || !this.shouldConnect) return;
-    const wsUrl = `ws://${url.replace(/^https?:\/\//, '')}/ws`;
+    const isSecure = url.startsWith('https://');
+    const wsUrl = `${isSecure ? 'wss' : 'ws'}://${url.replace(/^https?:\/\//, '')}/ws`;
     try {
       this.ws = new WebSocket(wsUrl);
       this.ws.onopen = () => { this.backoff = 1000; };

@@ -1,11 +1,19 @@
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import json, os, asyncio
 from typing import List
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    ua = request.headers.get("user-agent", "?")[:60]
+    print(f">>> {request.method} {request.url.path} | UA: {ua}", flush=True)
+    response = await call_next(request)
+    return response
 
 _DATA_DIR = os.environ.get("QUESTBOARD_DATA", "/data")
 STATE_FILE = os.path.join(_DATA_DIR, "state.json")
@@ -55,29 +63,30 @@ async def ws_endpoint(ws: WebSocket):
     except (WebSocketDisconnect, asyncio.TimeoutError, Exception):
         manager.disconnect(ws)
 
+_CLOSE = {"Connection": "close"}
+
 @app.get("/api/state")
 def get_state():
-    return read_json(STATE_FILE) or {}
+    return JSONResponse(read_json(STATE_FILE) or {}, headers=_CLOSE)
 
 @app.post("/api/state")
 async def post_state(request: Request):
     data = await request.json()
     write_json(STATE_FILE, data)
     await manager.broadcast({"type": "state", "data": data})
-    return {"ok": True}
+    return JSONResponse({"ok": True}, headers=_CLOSE)
 
 @app.get("/api/config")
 def get_config():
     config = read_json(CONFIG_FILE)
-    if config is None: return {"needs_setup": True}
-    return config
+    return JSONResponse(config if config is not None else {"needs_setup": True}, headers=_CLOSE)
 
 @app.post("/api/config")
 async def post_config(request: Request):
     data = await request.json()
     write_json(CONFIG_FILE, data)
     await manager.broadcast({"type": "config", "data": data})
-    return {"ok": True}
+    return JSONResponse({"ok": True}, headers=_CLOSE)
 
 # Serve frontend static files if present
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")

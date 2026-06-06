@@ -19,3 +19,13 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            force 'com.squareup.okhttp3:okhttp:4.12.0'
+            force 'com.squareup.okhttp3:okhttp-urlconnection:4.12.0'
+            force 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+        }
+    }
+}
