@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { joinHousehold, setServerUrl } from '../api/client';
+import { joinHousehold, setServerUrl, testConnection } from '../api/client';
 import { colors, spacing } from '../theme';
 
 interface Props {
@@ -22,22 +22,33 @@ export default function JoinScreen({ onJoined }: Props) {
   const [serverInput, setServerInput] = useState('');
   const [codeInput, setCodeInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
 
   async function handleJoin() {
     const url = serverInput.trim();
     const code = codeInput.trim();
-    if (!url || !code) {
-      Alert.alert('Missing info', 'Enter server address and household code.');
+    if (!url || (!adminMode && !code)) {
+      Alert.alert('Missing info', adminMode ? 'Enter server address.' : 'Enter server address and household code.');
       return;
     }
     setLoading(true);
     try {
-      const result = await joinHousehold(url, code);
-      if (result.ok) {
-        setServerUrl(url);
-        onJoined();
+      if (adminMode) {
+        const result = await testConnection(url);
+        if (result.ok) {
+          setServerUrl(url);
+          onJoined();
+        } else {
+          Alert.alert('Cannot reach server ❌', result.error || 'Check the address and try again.');
+        }
       } else {
-        Alert.alert('Failed to join ❌', result.error || 'Wrong code or server unreachable.');
+        const result = await joinHousehold(url, code);
+        if (result.ok) {
+          setServerUrl(url);
+          onJoined();
+        } else {
+          Alert.alert('Failed to join ❌', result.error || 'Wrong code or server unreachable.');
+        }
       }
     } finally {
       setLoading(false);
@@ -51,7 +62,9 @@ export default function JoinScreen({ onJoined }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Text style={styles.title}>⚔️ QUESTBOARD</Text>
-        <Text style={styles.subtitle}>Join your household to start your quest</Text>
+        <Text style={styles.subtitle}>
+          {adminMode ? 'Admin setup — connect to your server' : 'Join your household to start your quest'}
+        </Text>
 
         <View style={styles.card}>
           <Text style={styles.label}>Server address</Text>
@@ -66,31 +79,43 @@ export default function JoinScreen({ onJoined }: Props) {
             keyboardType="url"
           />
 
-          <Text style={styles.label}>Household code</Text>
-          <TextInput
-            style={[styles.input, styles.codeInput]}
-            value={codeInput}
-            onChangeText={t => setCodeInput(t.toUpperCase())}
-            placeholder="ABC-123"
-            placeholderTextColor={colors.textDim}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={7}
-          />
+          {!adminMode && (
+            <>
+              <Text style={styles.label}>Household code</Text>
+              <TextInput
+                style={[styles.input, styles.codeInput]}
+                value={codeInput}
+                onChangeText={t => setCodeInput(t.toUpperCase())}
+                placeholder="ABC-123"
+                placeholderTextColor={colors.textDim}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={7}
+              />
+            </>
+          )}
 
           <TouchableOpacity style={styles.btn} onPress={handleJoin} disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.btnText}>Join Household →</Text>
+              <Text style={styles.btnText}>{adminMode ? 'Connect →' : 'Join Household →'}</Text>
             )}
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.hint}>
-          Ask your household admin for the server address and code.{'\n'}
-          Find them in Settings → Household Code.
-        </Text>
+        <TouchableOpacity onPress={() => setAdminMode(v => !v)} style={styles.switchLink}>
+          <Text style={styles.switchText}>
+            {adminMode ? '← Join as family member' : 'I\'m the admin — set up this household'}
+          </Text>
+        </TouchableOpacity>
+
+        {!adminMode && (
+          <Text style={styles.hint}>
+            Ask your household admin for the server address and code.{'\n'}
+            Find them in Settings → Household Code.
+          </Text>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -146,12 +171,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   btnText: { color: '#fff', fontFamily: 'monospace', fontSize: 14, fontWeight: 'bold' },
+  switchLink: { marginTop: spacing.lg, alignItems: 'center' },
+  switchText: { color: colors.accent, fontFamily: 'monospace', fontSize: 12 },
   hint: {
     color: colors.textDim,
     fontFamily: 'monospace',
     fontSize: 11,
     textAlign: 'center',
-    marginTop: spacing.lg,
+    marginTop: spacing.sm,
     lineHeight: 18,
   },
 });
