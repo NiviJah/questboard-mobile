@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { AppState } from 'react-native';
-import { fetchConfig, fetchState, postConfig, postState, wsClient } from '../api/client';
+import { fetchConfig, fetchState, getBoundPlayerId, postConfig, postState, wsClient } from '../api/client';
 import { loadConfig, loadState, saveConfig, saveState } from '../storage/db';
 import {
   ALL_CHORES,
@@ -171,7 +171,20 @@ function applyAutoResets(state: GameState, config: GameConfig): GameState {
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setStateRaw] = useState<GameState>(defaultState);
   const [config, setConfigRaw] = useState<GameConfig>(defaultConfig);
-  const [currentPlayer, setCurrentPlayer] = useState(0);
+  const [currentPlayer, setCurrentPlayer] = useState(() => {
+    const boundId = getBoundPlayerId();
+    if (!boundId) return 0;
+    const idx = defaultConfig.players.findIndex((p: any) => p.id === boundId);
+    return idx >= 0 ? idx : 0;
+  });
+  // Re-sync currentPlayer index when server config players arrive
+  useEffect(() => {
+    const boundId = getBoundPlayerId();
+    if (!boundId) return;
+    const idx = config.players.findIndex((p: any) => p.id === boundId);
+    if (idx >= 0) setCurrentPlayer(idx);
+  }, [config.players]);
+
   const [serverUrl, setServerUrl] = useState('');
   const [isOnline, setIsOnline] = useState(false);
   const stateRef = useRef(state);

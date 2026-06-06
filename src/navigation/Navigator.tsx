@@ -9,7 +9,8 @@ import RewardsScreen from '../screens/RewardsScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import JoinScreen from '../screens/JoinScreen';
-import { getServerUrl } from '../api/client';
+import PlayerSelectScreen from '../screens/PlayerSelectScreen';
+import { getBoundPlayerId, getServerUrl, setBoundPlayerId } from '../api/client';
 import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -59,9 +60,21 @@ function TabNavigator() {
 
 export default function Navigator() {
   const [joined, setJoined] = useState(() => !!getServerUrl());
+  const [boundPlayerId, setBound] = useState(() => getBoundPlayerId());
 
   if (!joined) {
     return <JoinScreen onJoined={() => setJoined(true)} />;
+  }
+
+  if (!boundPlayerId) {
+    return (
+      <PlayerSelectScreen
+        onSelected={(id) => {
+          setBoundPlayerId(id);
+          setBound(id);
+        }}
+      />
+    );
   }
 
   return (

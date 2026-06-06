@@ -21,6 +21,14 @@ export function setIsAdmin(val: boolean): void {
   storage.set('isAdmin', val);
 }
 
+export function getBoundPlayerId(): string {
+  return storage.getString('boundPlayerId') ?? '';
+}
+
+export function setBoundPlayerId(id: string): void {
+  storage.set('boundPlayerId', id);
+}
+
 function apiBase(): string {
   const url = getServerUrl();
   if (!url) return '';

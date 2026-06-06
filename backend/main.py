@@ -15,7 +15,7 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     return response
 
-_DATA_DIR = os.environ.get("QUESTBOARD_DATA", "/data")
+_DATA_DIR = os.environ.get("QUESTBOARD_DATA", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"))
 STATE_FILE = os.path.join(_DATA_DIR, "state.json")
 CONFIG_FILE = os.path.join(_DATA_DIR, "config.json")
 
