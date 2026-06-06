@@ -122,7 +122,7 @@ export default function SettingsScreen() {
           <Text style={styles.label}>Join Code</Text>
           <Text style={styles.code}>{householdCode ?? '—'}</Text>
           <Text style={styles.codeHint}>Share this with family members so they can join</Text>
-          <TouchableOpacity style={styles.btn} onPress={handleShareInvite} disabled={!householdCode}>
+          <TouchableOpacity style={styles.btn} onPress={handleShareInvite}>
             <Text style={styles.btnText}>📨 Send Invite</Text>
           </TouchableOpacity>
         </View>

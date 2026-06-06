@@ -299,10 +299,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       let newWeeklyGold = { ...s.weeklyGold };
 
       // Grant 1 dungeon move per chore completed
+      const tKey = getTodayKey();
       const existingDungeonMap = s.dungeonMaps?.[player.id];
-      const updatedDungeonMap = existingDungeonMap
-        ? { ...existingDungeonMap, pendingMoves: (existingDungeonMap.pendingMoves ?? 0) + 1 }
-        : null;
+      const baseDungeonMap = (existingDungeonMap?.dayKey === tKey)
+        ? existingDungeonMap
+        : initDungeonMap(tKey);
+      const updatedDungeonMap = { ...baseDungeonMap, pendingMoves: (baseDungeonMap.pendingMoves ?? 0) + 1 };
 
       if (killed) {
         const luckLevel = luckForLevel(level);
@@ -388,9 +390,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ...(freq === 'daily' ? { dailyDone: newDoneStore } : {}),
         ...(freq === 'weekly' ? { weeklyDone: newDoneStore } : {}),
         ...(freq === 'monthly' ? { monthlyDone: newDoneStore } : {}),
-        dungeonMaps: updatedDungeonMap
-          ? { ...s.dungeonMaps, [player.id]: updatedDungeonMap }
-          : s.dungeonMaps,
+        dungeonMaps: { ...s.dungeonMaps, [player.id]: updatedDungeonMap },
       };
 
       applyState(newState);

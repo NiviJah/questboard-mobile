@@ -62,7 +62,7 @@ export default function RewardsScreen() {
             style={[styles.tab, currentPlayer === i && styles.tabActive]}
             onPress={() => setCurrentPlayer(i)}
           >
-            <Text style={styles.tabText}>{p.name} 💰{state.gold[p.id] ?? 0}</Text>
+            <Text style={styles.tabText}>{p.name}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>

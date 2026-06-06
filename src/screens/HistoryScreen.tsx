@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-  FlatList,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -23,70 +23,58 @@ export default function HistoryScreen() {
     return players.find(p => p.id === id)?.name ?? id;
   }
 
-  if (history.length === 0) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Text style={styles.title}>📜 History</Text>
-        </View>
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>No history yet. Complete some chores!</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>📜 History</Text>
       </View>
-      <FlatList
-        data={history}
-        keyExtractor={(_, i) => String(i)}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.entry}>
-            <View style={styles.entryLeft}>
-              {item.monster ? (
-                <>
-                  <Text style={styles.entryIcon}>⚔️</Text>
-                  <View>
-                    <Text style={styles.entryTitle}>{playerName(item.playerId)} defeated {item.monster}</Text>
-                    <Text style={styles.entryTime}>{formatTime(item.ts)}</Text>
+      {history.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>No history yet. Complete some chores!</Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.list}>
+          {history.map((item, i) => {
+            const pid = item?.playerId ?? '';
+            const ts = item?.ts ?? 0;
+            const gold = item?.gold;
+            const xp = item?.xp;
+            const monster = item?.monster;
+            const rewardName = item?.rewardName;
+            const choreName = item?.choreName;
+
+            let icon = '📋';
+            let title = `${playerName(pid)} — ${choreName ?? 'Chore'}`;
+            if (monster) {
+              icon = '⚔️';
+              title = `${playerName(pid)} defeated ${monster}`;
+            } else if (rewardName) {
+              icon = '🎁';
+              title = `${playerName(pid)} redeemed ${rewardName}`;
+            }
+
+            return (
+              <View key={i} style={styles.entry}>
+                <View style={styles.entryLeft}>
+                  <Text style={styles.entryIcon}>{icon}</Text>
+                  <View style={styles.entryTextCol}>
+                    <Text style={styles.entryTitle}>{title}</Text>
+                    <Text style={styles.entryTime}>{ts ? formatTime(ts) : ''}</Text>
                   </View>
-                </>
-              ) : item.rewardName ? (
-                <>
-                  <Text style={styles.entryIcon}>🎁</Text>
-                  <View>
-                    <Text style={styles.entryTitle}>{playerName(item.playerId)} redeemed {item.rewardName}</Text>
-                    <Text style={styles.entryTime}>{formatTime(item.ts)}</Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.entryIcon}>📋</Text>
-                  <View>
-                    <Text style={styles.entryTitle}>
-                      {playerName(item.playerId)} — {item.choreName ?? 'Chore'}
-                    </Text>
-                    <Text style={styles.entryTime}>{formatTime(item.ts)}</Text>
-                  </View>
-                </>
-              )}
-            </View>
-            {item.gold !== undefined && item.gold !== 0 && (
-              <Text style={[styles.goldBadge, item.gold < 0 ? styles.goldNeg : styles.goldPos]}>
-                {item.gold > 0 ? '+' : ''}{item.gold} 💰
-              </Text>
-            )}
-            {item.xp !== undefined && item.gold === undefined && (
-              <Text style={styles.xpBadge}>+{item.xp} XP</Text>
-            )}
-          </View>
-        )}
-      />
+                </View>
+                {gold !== undefined && gold !== 0 && (
+                  <Text style={[styles.badge, gold < 0 ? styles.goldNeg : styles.goldPos]}>
+                    {gold > 0 ? '+' : ''}{gold} 💰
+                  </Text>
+                )}
+                {xp !== undefined && gold === undefined && (
+                  <Text style={[styles.badge, styles.xpColor]}>+{xp} XP</Text>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -114,12 +102,13 @@ const styles = StyleSheet.create({
   },
   entryLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   entryIcon: { fontSize: 20 },
+  entryTextCol: { flex: 1 },
   entryTitle: { color: colors.text, fontFamily: 'monospace', fontSize: 12 },
   entryTime: { color: colors.textDim, fontFamily: 'monospace', fontSize: 10 },
-  goldBadge: { fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold' },
+  badge: { fontFamily: 'monospace', fontSize: 12, fontWeight: 'bold', marginLeft: spacing.xs },
   goldPos: { color: colors.gold },
   goldNeg: { color: colors.hp },
-  xpBadge: { color: colors.info ?? colors.accent, fontFamily: 'monospace', fontSize: 12 },
+  xpColor: { color: (colors as any).info ?? colors.accent },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: colors.textDim, fontFamily: 'monospace' },
 });
