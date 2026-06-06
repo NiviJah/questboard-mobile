@@ -55,17 +55,17 @@ export default function RewardsScreen() {
       </View>
 
       {/* Player tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.playerTabs} contentContainerStyle={styles.playerTabsContent}>
+      <View style={styles.playerTabs}>
         {players.map((p, i) => (
           <TouchableOpacity
             key={p.id}
             style={[styles.tab, currentPlayer === i && styles.tabActive]}
             onPress={() => setCurrentPlayer(i)}
           >
-            <Text style={styles.tabText}>{p.name}</Text>
+            <Text style={styles.tabText} numberOfLines={1}>{p.name}</Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
       {/* Filter tabs */}
       <View style={styles.filterRow}>
@@ -124,9 +124,9 @@ const styles = StyleSheet.create({
   title: { color: colors.gold, fontFamily: 'monospace', fontSize: 16, fontWeight: 'bold' },
   goldBadge: { backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
   goldText: { color: colors.gold, fontFamily: 'monospace', fontSize: 14 },
-  playerTabs: { flexGrow: 0, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  playerTabs: { flexDirection: 'row', backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   playerTabsContent: { paddingHorizontal: spacing.sm },
-  tab: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 2, borderBottomColor: 'transparent', flexShrink: 0 },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: colors.gold },
   tabText: { color: colors.text, fontSize: 13 },
   filterRow: { flexDirection: 'row', backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
