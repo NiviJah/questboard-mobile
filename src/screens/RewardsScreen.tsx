@@ -55,7 +55,7 @@ export default function RewardsScreen() {
       </View>
 
       {/* Player tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.playerTabs}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.playerTabs} contentContainerStyle={styles.playerTabsContent}>
         {players.map((p, i) => (
           <TouchableOpacity
             key={p.id}
@@ -125,6 +125,7 @@ const styles = StyleSheet.create({
   goldBadge: { backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
   goldText: { color: colors.gold, fontFamily: 'monospace', fontSize: 14 },
   playerTabs: { flexGrow: 0, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  playerTabsContent: { paddingHorizontal: spacing.sm },
   tab: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: colors.gold },
   tabText: { color: colors.text, fontFamily: 'monospace', fontSize: 12 },

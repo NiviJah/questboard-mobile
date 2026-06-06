@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -8,6 +8,8 @@ import DungeonScreen from '../screens/DungeonScreen';
 import RewardsScreen from '../screens/RewardsScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import JoinScreen from '../screens/JoinScreen';
+import { getServerUrl } from '../api/client';
 import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -56,6 +58,12 @@ function TabNavigator() {
 }
 
 export default function Navigator() {
+  const [joined, setJoined] = useState(() => !!getServerUrl());
+
+  if (!joined) {
+    return <JoinScreen onJoined={() => setJoined(true)} />;
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>

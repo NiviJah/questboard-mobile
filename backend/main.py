@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-import json, os, asyncio
+import json, os, asyncio, random, string
 from typing import List
 
 app = FastAPI()
@@ -51,6 +51,15 @@ def write_json(path, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f: json.dump(data, f)
 
+def get_or_create_code() -> str:
+    config = read_json(CONFIG_FILE) or {}
+    if "household_code" in config:
+        return config["household_code"]
+    code = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    config["household_code"] = code
+    write_json(CONFIG_FILE, config)
+    return code
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     await manager.connect(ws)
@@ -75,6 +84,22 @@ async def post_state(request: Request):
     write_json(STATE_FILE, data)
     await manager.broadcast({"type": "state", "data": data})
     return JSONResponse({"ok": True}, headers=_CLOSE)
+
+@app.post("/api/join")
+async def join_household(request: Request):
+    data = await request.json()
+    code = data.get("code", "").upper().replace("-", "")
+    actual = get_or_create_code()
+    if code != actual:
+        return JSONResponse({"ok": False, "error": "Invalid code"}, status_code=401, headers=_CLOSE)
+    config = read_json(CONFIG_FILE) or {}
+    return JSONResponse({"ok": True, "config": config}, headers=_CLOSE)
+
+@app.get("/api/household-code")
+def household_code():
+    code = get_or_create_code()
+    formatted = f"{code[:3]}-{code[3:]}"
+    return JSONResponse({"code": formatted}, headers=_CLOSE)
 
 @app.get("/api/config")
 def get_config():

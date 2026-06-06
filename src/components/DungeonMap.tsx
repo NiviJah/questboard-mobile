@@ -43,20 +43,15 @@ interface Props {
 }
 
 export default function DungeonMap({ player }: Props) {
-  const { state, fightDungeonMonster } = useGame();
+  const { state, fightDungeonMonster, updateDungeonMap } = useGame();
   const xp = state.xp[player.id] ?? 0;
   const { level } = getLevelFromXP(xp);
   const luck = luckForLevel(level);
   const tKey = todayKey();
 
-  // Initialize dungeon map for player if needed
+  // Sync from global state; initialize for today if missing/stale
   const storedMap = state.dungeonMaps?.[player.id];
-  const [localMap, setLocalMap] = useState(() => {
-    if (storedMap?.dayKey === tKey) return storedMap;
-    return initDungeonMap(tKey);
-  });
-
-  const map = localMap;
+  const map = (storedMap?.dayKey === tKey) ? storedMap : initDungeonMap(tKey);
   const [px, py] = map.pos;
   const explored = new Set(map.explored);
 
@@ -64,18 +59,15 @@ export default function DungeonMap({ player }: Props) {
     if (map.activeMonster && (map.activeMonster.currentHP ?? 0) > 0) return;
     if (map.pendingMoves <= 0) return;
     const result = dungeonMoveResult(map, dx, dy, tKey, player.mode, luck);
-    if (result) setLocalMap(result.newMap);
+    if (result) updateDungeonMap(player.id, result.newMap);
   }
 
   function attackMonster() {
     if (!map.activeMonster) return;
+    const newHP = Math.max(0, (map.activeMonster.currentHP ?? 0) - 3);
+    const newMap = { ...map, activeMonster: newHP > 0 ? { ...map.activeMonster, currentHP: newHP } : null };
     fightDungeonMonster(player.id, 3);
-    setLocalMap(prev => ({
-      ...prev,
-      activeMonster: prev.activeMonster
-        ? { ...prev.activeMonster, currentHP: Math.max(0, (prev.activeMonster.currentHP ?? 0) - 3) }
-        : null,
-    }));
+    updateDungeonMap(player.id, newMap);
   }
 
   return (

@@ -68,16 +68,21 @@ export default function HistoryScreen() {
                 <>
                   <Text style={styles.entryIcon}>📋</Text>
                   <View>
-                    <Text style={styles.entryTitle}>{playerName(item.playerId)} completed a chore</Text>
+                    <Text style={styles.entryTitle}>
+                      {playerName(item.playerId)} — {item.choreName ?? 'Chore'}
+                    </Text>
                     <Text style={styles.entryTime}>{formatTime(item.ts)}</Text>
                   </View>
                 </>
               )}
             </View>
-            {item.gold !== undefined && (
+            {item.gold !== undefined && item.gold !== 0 && (
               <Text style={[styles.goldBadge, item.gold < 0 ? styles.goldNeg : styles.goldPos]}>
                 {item.gold > 0 ? '+' : ''}{item.gold} 💰
               </Text>
+            )}
+            {item.xp !== undefined && item.gold === undefined && (
+              <Text style={styles.xpBadge}>+{item.xp} XP</Text>
             )}
           </View>
         )}
@@ -114,6 +119,7 @@ const styles = StyleSheet.create({
   goldBadge: { fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold' },
   goldPos: { color: colors.gold },
   goldNeg: { color: colors.hp },
+  xpBadge: { color: colors.info ?? colors.accent, fontFamily: 'monospace', fontSize: 12 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: colors.textDim, fontFamily: 'monospace' },
 });

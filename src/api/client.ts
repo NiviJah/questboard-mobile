@@ -117,6 +117,23 @@ export async function postConfig(data: any): Promise<void> {
   await qbPost(`${base}/api/config`, data);
 }
 
+export async function fetchHouseholdCode(): Promise<string> {
+  const base = apiBase();
+  if (!base) throw new Error('No server URL configured');
+  const res = await qbGet(`${base}/api/household-code`);
+  return res.code as string;
+}
+
+export async function joinHousehold(serverUrl: string, code: string): Promise<{ ok: boolean; error: string }> {
+  const base = serverUrl.startsWith('http') ? serverUrl.replace(/\/$/, '') : `http://${serverUrl}`;
+  try {
+    const res = await qbPost(`${base}/api/join`, { code: code.toUpperCase().replace('-', '') }, 10000);
+    return { ok: true, error: '' };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? 'Join failed' };
+  }
+}
+
 export async function testConnection(serverUrl: string): Promise<{ ok: boolean; error: string }> {
   const base = serverUrl.startsWith('http') ? serverUrl.replace(/\/$/, '') : `http://${serverUrl}`;
   const id = nextId();

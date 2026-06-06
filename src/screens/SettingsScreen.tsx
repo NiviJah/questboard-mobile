@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
@@ -11,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getServerUrl, setServerUrl, testConnection } from '../api/client';
+import { fetchHouseholdCode, getServerUrl, setServerUrl, testConnection } from '../api/client';
 import { useGame } from '../context/GameContext';
 import { CLASSES } from '../game/data';
 import { colors, spacing } from '../theme';
@@ -21,6 +22,19 @@ export default function SettingsScreen() {
   const [serverInput, setServerInput] = useState(getServerUrl());
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<boolean | null>(null);
+  const [householdCode, setHouseholdCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchHouseholdCode().then(setHouseholdCode).catch(() => {});
+  }, [isOnline]);
+
+  async function handleShareInvite() {
+    const url = getServerUrl();
+    const code = householdCode ?? '—';
+    await Share.share({
+      message: `Join our Questboard household! 🏰\n\nServer: ${url}\nCode: ${code}\n\nOpen Questboard → Join Household → enter these details.`,
+    });
+  }
 
   async function handleTestAndSave() {
     setTesting(true);
@@ -100,6 +114,17 @@ export default function SettingsScreen() {
           </TouchableOpacity>
           {testResult === true && <Text style={styles.success}>✓ Connected!</Text>}
           {testResult === false && <Text style={styles.error}>✗ Connection failed</Text>}
+        </View>
+
+        {/* Household section */}
+        <Text style={styles.sectionTitle}>Household</Text>
+        <View style={styles.card}>
+          <Text style={styles.label}>Join Code</Text>
+          <Text style={styles.code}>{householdCode ?? '—'}</Text>
+          <Text style={styles.codeHint}>Share this with family members so they can join</Text>
+          <TouchableOpacity style={styles.btn} onPress={handleShareInvite} disabled={!householdCode}>
+            <Text style={styles.btnText}>📨 Send Invite</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Players section */}
@@ -279,4 +304,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   syncBtnText: { color: colors.info, fontFamily: 'monospace', fontSize: 13 },
+  code: {
+    color: colors.gold,
+    fontFamily: 'monospace',
+    fontSize: 28,
+    fontWeight: 'bold',
+    letterSpacing: 6,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
+  codeHint: {
+    color: colors.textDim,
+    fontFamily: 'monospace',
+    fontSize: 11,
+    textAlign: 'center',
+  },
 });

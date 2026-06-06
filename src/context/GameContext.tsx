@@ -88,6 +88,7 @@ interface GameContextValue {
   isOnline: boolean;
   completeChore: (choreId: string, freq: 'daily' | 'weekly' | 'monthly') => void;
   fightDungeonMonster: (playerId: string, damage: number) => void;
+  updateDungeonMap: (playerId: string, map: any) => void;
   redeemReward: (rewardId: string, playerId: string) => void;
   updateConfig: (cfg: Partial<GameConfig>) => Promise<void>;
   refreshFromServer: () => Promise<void>;
@@ -287,12 +288,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       let goldGain = 0;
       let xpGain = chore.pts;
-      let newHistory = s.history;
+      let newHistory: any[] = [
+        { playerId: player.id, choreId: chore.id, choreName: chore.name ?? chore.id, xp: chore.pts, ts: Date.now() },
+        ...s.history.slice(0, 99),
+      ];
       let newStreaks = { ...s.streaks };
       let newBadges = { ...s.badges };
       let newOverkill = { ...s.overkillCharge };
       let newActivePowerUps = { ...s.activePowerUps };
       let newWeeklyGold = { ...s.weeklyGold };
+
+      // Grant 1 dungeon move per chore completed
+      const existingDungeonMap = s.dungeonMaps?.[player.id];
+      const updatedDungeonMap = existingDungeonMap
+        ? { ...existingDungeonMap, pendingMoves: (existingDungeonMap.pendingMoves ?? 0) + 1 }
+        : null;
 
       if (killed) {
         const luckLevel = luckForLevel(level);
@@ -304,7 +314,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         newStreaks[player.id] = streak + 1;
         newHistory = [
           { playerId: player.id, monster: monster?.name, gold: goldGain, ts: Date.now() },
-          ...s.history.slice(0, 99),
+          ...newHistory.slice(0, 98),
         ];
         const overkill = damage - maxHP + currentDmg;
         const newCharge = (s.overkillCharge[player.id] ?? 0) + (overkill > 0 ? 1 : 0);
@@ -378,6 +388,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ...(freq === 'daily' ? { dailyDone: newDoneStore } : {}),
         ...(freq === 'weekly' ? { weeklyDone: newDoneStore } : {}),
         ...(freq === 'monthly' ? { monthlyDone: newDoneStore } : {}),
+        dungeonMaps: updatedDungeonMap
+          ? { ...s.dungeonMaps, [player.id]: updatedDungeonMap }
+          : s.dungeonMaps,
       };
 
       applyState(newState);
@@ -406,6 +419,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ...s,
         gold: { ...s.gold, [playerId]: (s.gold[playerId] ?? 0) + goldGain },
         dungeonMaps: { ...s.dungeonMaps, [playerId]: newMap },
+      };
+      applyState(newState);
+      pushState(newState);
+    },
+    [applyState, pushState],
+  );
+
+  const updateDungeonMap = useCallback(
+    (playerId: string, map: any) => {
+      const s = stateRef.current;
+      const newState: GameState = {
+        ...s,
+        dungeonMaps: { ...s.dungeonMaps, [playerId]: map },
       };
       applyState(newState);
       pushState(newState);
@@ -493,6 +519,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     isOnline,
     completeChore,
     fightDungeonMonster,
+    updateDungeonMap,
     redeemReward,
     updateConfig,
     refreshFromServer,
